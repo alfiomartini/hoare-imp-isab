@@ -6,5 +6,5 @@ presentation on how to  use the Hoare Logic library that comes with the Isabelle
 distribution in order to conduct and write proofs of correctness of
 sequential imperative programs. Special attention is given to the
 structured proof language Isar, with which the user can write
-down highly readableproofs in a formal language  that is amenable to human understanding, 
+down highly readable proofs in a formal language  that is amenable to human understanding, 
 both for communication and maintenance.
