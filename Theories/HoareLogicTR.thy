@@ -71,9 +71,9 @@ lemma impRev: "VARS (acc::'a list) (xs::'a list)
  DO acc := (hd xs # acc); xs := tl xs OD
  {acc=rev(X)}"
 apply (vcg) 
-apply (simp)
-using hd_tl_app apply (force)
-apply (auto)
+  apply (simp)
+  using hd_tl_app apply (force)
+  apply (auto)
 done
 
 lemma impRev_isar: "VARS acc x
@@ -226,11 +226,33 @@ lemma inss_hoare: "VARS xs ys :: ('a::linorder) list
  DO ys := ins (hd xs) ys; xs := tl xs OD
 {isorted ys \<and> is_perm X ys}"
 apply (vcg)  
-apply (auto simp add:is_perm_def) \<comment> \<open> 1 \<close>
-   apply (simp add: ins_sorted)  \<comment> \<open> 2 \<close>
-   apply (simp add: ins_len) \<comment> \<open> 3 \<close>
-   apply (smt count.simps(2) count_sum hd_Cons_tl ins_count) \<comment> \<open> 4 \<close>
-done
+   apply (auto simp add:is_perm_def) \<comment> \<open> 1 \<close>
+       apply (simp add: ins_sorted) \<comment> \<open>1.1\<close>
+       apply (simp add: ins_len) \<comment> \<open>1.2\<close>
+        by (smt count.simps(2) count_sum ins_count 
+          list.collapse) \<comment>\<open>1.3\<close>
+       
+
+
+lemma inss_hoareb: "VARS xs ys :: ('a::linorder) list
+ {xs=X}
+ ys:=[];
+ WHILE xs \<noteq> []
+    INV {isorted ys \<and> is_perm X (ys @ xs)}
+ DO ys := ins (hd xs) ys; xs := tl xs OD
+{isorted ys \<and> is_perm X ys}"
+apply (vcg)  
+   apply (simp add:is_perm_def) \<comment> \<open> 1 \<close>
+   apply (rule conjI)  \<comment> \<open> 2 \<close>
+      apply (simp add: ins_sorted) \<comment> \<open>2.1\<close>
+      apply (simp add:is_perm_def ins_len) \<comment>\<open>2.2\<close>
+        apply (simp add:count_sum ins_count) \<comment>\<open>2.2\<close>
+        apply (metis count.elims list.collapse 
+            list.inject) \<comment>\<open>2.2\<close>
+  by auto \<comment>\<open>3\<close>
+   
+           
+          
 
 lemma inss_isar_draft:
 "VARS xs ys :: ('a::linorder) list
@@ -240,18 +262,21 @@ lemma inss_isar_draft:
        INV {isorted ys \<and> is_perm X (ys @ xs)}
        DO ys := ins (hd xs) ys; xs := tl xs OD
        {isorted ys \<and> is_perm X ys}"
-proof (vcg)
-   fix xs ys 
-   assume ass:"(isorted ys \<and> is_perm X (ys @ xs)) \<and> xs \<noteq> []"   
-   show "isorted (ins (hd xs) ys) \<and> is_perm X ((ins (hd xs) ys) @ tl xs)" 
-    proof (rule conjI)
-       show "isorted (ins (hd xs) ys)" sorry
-    next
-       have pg1:"length X  =  length ((ins (hd xs) ys) @ tl xs)" sorry 
-       have pg2:"\<forall> k. count k X = count k (ins (hd xs) ys @ tl xs)" sorry
-       from pg1 pg2 show "is_perm X (ins (hd xs) ys @ tl xs)" sorry 
-   qed
-qed (auto simp add:is_perm_def)
+    proof (vcg)
+       fix xs ys 
+       assume ass:"(isorted ys \<and> is_perm X (ys @ xs)) \<and> xs \<noteq> []"   
+       show "isorted (ins (hd xs) ys) 
+              \<and> is_perm X ((ins (hd xs) ys) @ tl xs)" 
+        proof (rule conjI)
+           show "isorted (ins (hd xs) ys)" sorry
+        next
+           have pg1:"length X  =  length ((ins (hd xs) ys) @ tl xs)"
+                sorry 
+           have pg2:"\<forall> k. count k X = count k (ins (hd xs) ys @ tl xs)" 
+                sorry
+           from pg1 pg2 show "is_perm X (ins (hd xs) ys @ tl xs)" sorry 
+       qed
+    qed (auto simp add:is_perm_def)
 
 
 lemma inss_isar: "VARS xs ys :: ('a::linorder) list
@@ -261,6 +286,7 @@ lemma inss_isar: "VARS xs ys :: ('a::linorder) list
        INV {isorted ys \<and> is_perm X (ys @ xs)}
        DO ys := ins (hd xs) ys; xs := tl xs OD
        {isorted ys \<and> is_perm X ys}"
+
 proof (vcg)
    fix xs ys 
    assume ass:"(isorted ys \<and> is_perm X (ys @ xs)) \<and> xs \<noteq> []"   
