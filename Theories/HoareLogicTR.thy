@@ -6,7 +6,17 @@ begin
 
 section \<open>Hoare Logic in Isabelle/HOL\<close>
 
- 
+
+lemma slow_sub_isa:
+"VARS  (x::nat) (z::nat)
+{x=M \<and> z=P}
+WHILE \<not>(x=0)
+  INV { z-x = P-M \<and> x\<ge>0}
+  DO z:=z-1;x:=x-1 OD
+{z = P-M}"
+apply (vcg)
+apply (auto)
+done
 
 lemma imp_pot:
 "VARS (a::int) (b::nat) (p::int) (i::nat)
@@ -27,11 +37,13 @@ WHILE i<b
   INV { p = a^i \<and> i\<le> b \<and> a=A \<and> b = B}
   DO p := p * a;i:=i+1 OD
 {p = A^B}"
+
 proof (vcg)
   fix a b p i 
   let ?INV = "p = a ^ i \<and> i \<le> b \<and> a = A \<and> b = B"
   assume ass:"?INV  \<and> i < b"
-  show "p * a = a ^ (i + 1) \<and> i + 1 \<le> b \<and> a = A \<and> b = B"
+  show "p * a = a ^ (i + 1) \<and> i + 1 \<le> b
+        \<and> a = A \<and> b = B"
     proof - 
       from ass obtain 1: "p = a ^ i" and 2:"i \<le> b"
       and 3:"a = A \<and> b = B" and 5:"i<b"  by blast
@@ -60,20 +72,21 @@ done
 lemma "tail_rev xs [] = rev xs" by (simp add:tail_rev)
 
 
-lemma hd_tl_app:"xs \<noteq> [] \<Longrightarrow> xs = [hd xs] @ tl xs"
-  by simp
+lemma hd_tl_app:"xs \<noteq> [] \<Longrightarrow> 
+        xs = [hd xs] @ tl xs"
+            by simp
  
 lemma impRev: "VARS (acc::'a list) (xs::'a list)
  {xs=X}
  acc:=[];
  WHILE xs \<noteq> []
- INV {rev(xs)@acc = rev(X)}
+   INV {rev(xs)@acc = rev(X)}
  DO acc := (hd xs # acc); xs := tl xs OD
  {acc=rev(X)}"
 apply (vcg) 
-  apply (simp)
-  using hd_tl_app apply (force)
-  apply (auto)
+apply (simp)
+    using hd_tl_app apply (force)
+ apply (auto)
 done
 
 lemma impRev_isar: "VARS acc x
@@ -89,9 +102,14 @@ proof (vcg)
       from ass obtain 1:"rev x @ acc = rev X" 
         and 2:" x\<noteq>[]" by blast
       from 2 have "x = hd x # tl x"  by simp
-      from 1 and this  have 3:"rev x = rev (hd x # tl x)" by simp
-      have "rev (hd x # tl x) = rev (tl x) @ [hd x]" by simp
-      from 3 and this have "rev x =  rev (tl x) @ [hd x]" by simp
+      from 1 and this  
+        have 3:"rev x = rev (hd x # tl x)" 
+            by simp
+        have "rev (hd x # tl x) = 
+              rev (tl x) @ [hd x]" by simp
+      from 3 and this 
+        have "rev x =  
+              rev (tl x) @ [hd x]" by simp
       from this and 1 show ?thesis by simp
     qed 
 qed (auto)
@@ -99,26 +117,28 @@ qed (auto)
 
 section \<open>Case Study: Insertion Sort\<close> 
 
-fun ins::"'a::linorder \<Rightarrow> 'a list \<Rightarrow> 'a list" where 
-  "ins x [] = [x]" |
-  "ins x (y # ys) = 
-      (if x \<le> y then (x # y # ys) else y#ins x ys)" 
+fun ins::"'a::linorder \<Rightarrow> 'a list \<Rightarrow> 'a list"
+where  "ins x [] = [x]" |
+ "ins x (y # ys) = (if x \<le> y then (x # y # ys)
+                    else y#ins x ys)" 
 
-fun iSort::"('a::linorder) list \<Rightarrow> 'a list" where 
-"iSort [] = []" | 
-"iSort (x # xs) = ins x (iSort xs)"
+fun iSort::"('a::linorder) list \<Rightarrow> 'a list" 
+where "iSort [] = []" | 
+      "iSort (x # xs) = ins x (iSort xs)"
 
-fun le::"('a::linorder) \<Rightarrow> 'a list \<Rightarrow> bool"  where 
-"le x [] = True" | 
-"le x (y # ys) = (x \<le>y \<and> le x ys)"
+fun le::"('a::linorder) \<Rightarrow> 'a list \<Rightarrow> bool"  
+where  "le x [] = True" | 
+       "le x (y # ys) = (x \<le>y \<and> le x ys)"
 
-fun isorted::"('a::linorder) list \<Rightarrow> bool" where   
-"isorted [] = True" | 
-"isorted (x # xs) = (le x xs \<and> isorted xs)"
+fun isorted::"('a::linorder) list \<Rightarrow> bool"
+where   
+  "isorted [] = True" | 
+  "isorted (x # xs) = (le x xs \<and> isorted xs)"
 
-fun count:: "'a \<Rightarrow> 'a list \<Rightarrow> int" where 
-"count x [] = 0" |
-"count x (y # ys) =(if x=y then  1 + count x ys else count x ys)"
+fun count:: "'a \<Rightarrow> 'a list \<Rightarrow> int"  where 
+  "count x [] = 0" |
+  "count x (y # ys) = (if x=y then 
+     1 + count x ys else count x ys)"
 
 fun tail_iSort::"('a::linorder) list \<Rightarrow> 'a list \<Rightarrow> 'a list" where
 "tail_iSort [] acc = acc" |  
@@ -128,17 +148,19 @@ value "iSort [12,-3,-4,200,2::int]"
 value "tail_iSort [12,-3,-4,200,2::int] []"
 value "isorted(tail_iSort [12,-3,-4,200,2::int] [1,2,3])"
 
-text \<open>
-lemma le_ins: "le x (ins a xs) = (x \<le> a \<and> le x xs)"                       sorry
-lemma le_mon:"x\<le>y \<Longrightarrow> le y xs \<Longrightarrow> le x xs"                                sorry
-lemma ins_sorted: "isorted (ins a xs) = isorted xs"                        sorry
-lemma is_sorted:"isorted(iSort xs)"                                        sorry
-lemma ins_count:
- "count x (ins k xs) = (if x = k then 1 + count x xs else count x xs)"   sorry
-lemma count_sum:"count x (xs @ ys) = count x xs + count x ys"              sorry
-lemma len_sort:"length(iSort xs) = length xs"                              sorry
-lemma count_iSort: "count x (iSort xs) = count x xs"                       sorry
-lemma ins_len:"length (ins k xs) = 1 + length xs"                          sorry
+text\<open>
+  lemma le_ins: "le x (ins a xs) = (x \<le> a \<and> le x xs)"                       sorry
+  lemma le_mon:"x\<le>y \<Longrightarrow> le y xs \<Longrightarrow> le x xs"                                sorry
+  lemma ins_sorted: "isorted (ins a xs) = isorted xs"                        sorry
+  lemma is_sorted:"isorted(iSort xs)"                                        sorry
+  lemma ins_count:
+   "count x (ins k xs) = (if x = k then 1 
+          + count x xs else count x xs)"                                     sorry
+  lemma count_sum:"count x (xs @ ys) =
+          count x xs + count x ys"                                           sorry
+  lemma len_sort:"length(iSort xs) = length xs"                              sorry
+  lemma count_iSort: "count x (iSort xs) = count x xs"                       sorry
+  lemma ins_len:"length (ins k xs) = 1 + length xs"                          sorry
 \<close>
 
 lemma le_ins: "le x (ins a xs) = (x \<le> a \<and> le x xs)"
@@ -216,7 +238,7 @@ apply (auto simp add: ins_count)
  
 definition is_perm::"'a list \<Rightarrow> 'a list \<Rightarrow> bool" 
 where "is_perm l1 l2 \<equiv> length l1 = length l2 
-                        \<and> (\<forall>x. count x l1 = count x l2)"
+              \<and> (\<forall>x. count x l1 = count x l2)"
 
 lemma inss_hoare: "VARS xs ys :: ('a::linorder) list
  {xs=X}
@@ -225,13 +247,14 @@ lemma inss_hoare: "VARS xs ys :: ('a::linorder) list
     INV {isorted ys \<and> is_perm X (ys @ xs)}
  DO ys := ins (hd xs) ys; xs := tl xs OD
 {isorted ys \<and> is_perm X ys}"
-apply (vcg)  
-   apply (auto simp add:is_perm_def) \<comment> \<open> 1 \<close>
-       apply (simp add: ins_sorted) \<comment> \<open>1.1\<close>
-       apply (simp add: ins_len) \<comment> \<open>1.2\<close>
-        by (smt count.simps(2) count_sum ins_count 
-          list.collapse) \<comment>\<open>1.3\<close>
-       
+ apply (vcg)  
+ apply (auto simp add:is_perm_def) \<comment> \<open> 1 \<close>
+   apply (simp add: ins_sorted) \<comment> \<open>1.1\<close>
+   apply (simp add: ins_len) \<comment> \<open>1.2\<close>
+   apply  (smt count.simps(2) count_sum ins_count 
+           list.collapse) \<comment>\<open>1.3\<close>
+done
+     
 
 
 lemma inss_hoareb: "VARS xs ys :: ('a::linorder) list
@@ -240,41 +263,43 @@ lemma inss_hoareb: "VARS xs ys :: ('a::linorder) list
  WHILE xs \<noteq> []
     INV {isorted ys \<and> is_perm X (ys @ xs)}
  DO ys := ins (hd xs) ys; xs := tl xs OD
-{isorted ys \<and> is_perm X ys}"
-apply (vcg)  
-   apply (simp add:is_perm_def) \<comment> \<open> 1 \<close>
-   apply (rule conjI)  \<comment> \<open> 2 \<close>
+{isorted ys \<and> is_perm X ys}" 
+  apply (vcg)  
+  apply (simp add:is_perm_def) \<comment> \<open> 1 \<close>
+  apply (rule conjI)  \<comment> \<open> 2 \<close>
       apply (simp add: ins_sorted) \<comment> \<open>2.1\<close>
-      apply (simp add:is_perm_def ins_len) \<comment>\<open>2.2\<close>
-        apply (simp add:count_sum ins_count) \<comment>\<open>2.2\<close>
-        apply (metis count.elims list.collapse 
-            list.inject) \<comment>\<open>2.2\<close>
-  by auto \<comment>\<open>3\<close>
-   
-           
+      apply (simp add:is_perm_def) \<comment>\<open>2.2\<close>
+        apply (rule conjI)
+        apply (simp add: ins_len)
+        apply (smt count.simps(2) count_sum 
+              ins_count list.collapse)
+      apply (auto) \<comment>\<open>2.3\<close>
+  done           
           
 
 lemma inss_isar_draft:
 "VARS xs ys :: ('a::linorder) list
-       {xs=X}
-       ys:=[];
-       WHILE xs \<noteq> []
+ {xs=X} ys:=[];
+ WHILE xs \<noteq> []
        INV {isorted ys \<and> is_perm X (ys @ xs)}
-       DO ys := ins (hd xs) ys; xs := tl xs OD
-       {isorted ys \<and> is_perm X ys}"
+ DO ys := ins (hd xs) ys; xs := tl xs OD
+{isorted ys \<and> is_perm X ys}"
+
     proof (vcg)
        fix xs ys 
-       assume ass:"(isorted ys \<and> is_perm X (ys @ xs)) \<and> xs \<noteq> []"   
+       assume ass:"(isorted ys \<and> 
+          is_perm X (ys @ xs)) \<and> xs \<noteq> []"   
        show "isorted (ins (hd xs) ys) 
               \<and> is_perm X ((ins (hd xs) ys) @ tl xs)" 
-        proof (rule conjI)
+       proof (rule conjI)
            show "isorted (ins (hd xs) ys)" sorry
-        next
-           have pg1:"length X  =  length ((ins (hd xs) ys) @ tl xs)"
-                sorry 
-           have pg2:"\<forall> k. count k X = count k (ins (hd xs) ys @ tl xs)" 
-                sorry
-           from pg1 pg2 show "is_perm X (ins (hd xs) ys @ tl xs)" sorry 
+       next
+           have pg1:"length X  =  
+            length ((ins (hd xs) ys) @ tl xs)" sorry 
+           have pg2:"\<forall> k. count k X = 
+            count k (ins (hd xs) ys @ tl xs)"  sorry
+           from pg1 pg2 show 
+            "is_perm X (ins (hd xs) ys @ tl xs)" sorry 
        qed
     qed (auto simp add:is_perm_def)
 
@@ -289,25 +314,35 @@ lemma inss_isar: "VARS xs ys :: ('a::linorder) list
 
 proof (vcg)
    fix xs ys 
-   assume ass:"(isorted ys \<and> is_perm X (ys @ xs)) \<and> xs \<noteq> []"   
-   show "isorted (ins (hd xs) ys) \<and> is_perm X ((ins (hd xs) ys) @ tl xs)" 
+   assume ass:"(isorted ys \<and> is_perm X (ys @ xs))
+                 \<and> xs \<noteq> []"   
+   show "isorted (ins (hd xs) ys)
+        \<and> is_perm X ((ins (hd xs) ys) @ tl xs)" 
       proof (rule conjI)
          from ass have "isorted ys" by simp
-         from this show "isorted (ins (hd xs) ys)" by (simp add:ins_sorted)
+         from this show "isorted (ins (hd xs) ys)" 
+            by (simp add:ins_sorted)
       next 
-        from ass have 1:"is_perm X (ys @ xs)" and 2:"xs \<noteq> []" by auto 
+        from ass have 1:"is_perm X (ys @ xs)" 
+           and 2:"xs \<noteq> []" by auto 
         from 2 have hdtl:"xs = hd xs # tl xs" by simp 
-        from 1 have 3:"\<forall> x. count x X = count x (ys @ xs)" by (simp add:is_perm_def)
-        have pg1:"length X  =  length ((ins (hd xs) ys) @ tl xs)"
-           proof - 
-               from 1 have 4:"length X = length (xs @ ys)" by (simp add:is_perm_def)
-               also have "\<dots>= length xs + length ys" by simp
-               also have "\<dots> =  1 + length ys + length xs - 1" by simp
-               also have "\<dots> = length (ins (hd xs) ys) + length (tl xs)"
-                                by (simp add: "2" ins_len)
-               also have "\<dots> = length ((ins (hd xs) ys) @ tl xs)" by simp
-               finally show ?thesis  by simp
-           qed 
+        from 1 have 3:"\<forall> x. count x X = count x (ys @ xs)" 
+                  by (simp add:is_perm_def)
+        have pg1:"length X 
+              =  length ((ins (hd xs) ys) @ tl xs)"
+         proof - 
+           from 1 have 4:"length X = length (xs @ ys)" 
+                 by (simp add:is_perm_def)
+           also have "\<dots>= length xs + length ys" by simp
+           also have "\<dots> =  1 + length ys + 
+                   length xs - 1" by simp
+           also have "\<dots> = length (ins (hd xs) ys) + 
+                     length (tl xs)"
+                            by (simp add: "2" ins_len)
+           also have "\<dots> = 
+             length ((ins (hd xs) ys) @ tl xs)" by simp
+           finally show ?thesis  by simp
+         qed 
         have pg2:"\<forall> k. count k X = count k (ins (hd xs) ys @ tl xs)" 
            proof (rule allI)
              fix k
